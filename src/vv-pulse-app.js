@@ -14,9 +14,13 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 const storage = firebase.storage();
 
-// VVScout init — fratele lui VVEil (hybrid: Firestore + localStorage + free APIs)
-if (typeof VVScout !== 'undefined') {
-    VVScout.init(db, auth);
+// VVScout init
+if (typeof VVScout !== 'undefined') { VVScout.init(db, auth); }
+
+// VVMood init
+if (typeof VVMood !== 'undefined') {
+    VVMood.init(db, auth, null, null);
+    document.addEventListener('vvmood:coins', function() {});
 }
 
 // ================= VARIABILE GLOBALE =================
@@ -2997,3 +3001,5 @@ function getEdgeContextForNexus() {
 
 
 Length: 152195
+
+
