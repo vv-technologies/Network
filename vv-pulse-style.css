@@ -1007,11 +1007,7 @@ body {
     box-shadow: 0 2px 12px rgba(255,255,255,0.15);
 }
 
-/* ============================================
-   SHIMMER ANIMATION — Bara Insider style Uber
-   ============================================ */
-@keyframes shimmer {
-    0% { background-position: -200% 0; }
+/* shimmer removed */
     100% { background-position: 200% 0; }
 }
 
