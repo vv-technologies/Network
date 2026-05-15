@@ -23,7 +23,7 @@ const VVMood = (function () {
   const BADGES = {
     first:    { name: 'Prima Contribuție', icon: '🌱', desc: 'Primul tap la harta orașului' },
     streak7:  { name: 'Vocea Cartierului', icon: '🎙️', desc: '7 zile consecutive' },
-    streak30: { name: 'Pulsul Orașului',   icon: '💛', desc: '30 de zile consecutive' },
+    streak30: { name: 'Pulsul Orașului',   icon: '🌐', desc: '30 de zile consecutive' },
     sensor50: { name: 'Sensor Activ',      icon: '📡', desc: '50 de contribuții' },
     pioneer:  { name: 'Pionier',           icon: '🌟', desc: 'Primul care a mapat această zonă' }
   };
@@ -111,16 +111,13 @@ const VVMood = (function () {
       return null;
     }
 
-    // Streak
     _profile.streak = _profile.lastDate === _d(-1) ? _profile.streak + 1 : 1;
     _profile.lastDate = today;
     _profile.total++;
 
-    // History (last 30)
     _profile.history.unshift({ date: today, mood: moodId, geo: _geo });
     if (_profile.history.length > 30) _profile.history.pop();
 
-    // Coins
     let bonus = 0;
     _profile.coins += COINS_TAP;
     if (_profile.streak === 7)  { bonus = COINS_STREAK_7;  _badge('streak7'); }
@@ -130,11 +127,9 @@ const VVMood = (function () {
     _profile.coins += bonus;
     _save();
 
-    // Firestore aggregate (anonymous)
     const isNewCell = await _aggregate(moodId);
     if (isNewCell) _badge('pioneer');
 
-    // Dispatch coins to VV Pulse
     document.dispatchEvent(new CustomEvent('vvmood:coins', { detail: { amount: COINS_TAP + bonus } }));
 
     return { mood: MOODS[moodId], streak: _profile.streak, coins: COINS_TAP + bonus };
@@ -160,11 +155,37 @@ const VVMood = (function () {
         [`dw${dw}_${moodId}`]: inc,
         ts: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
+      _checkAnomaly(snap, moodId);
       return isNew;
     } catch {
       _queueOffline(moodId);
       return false;
     }
+  }
+
+  // Mood → Pulse bridge: dominance ≥65% + min 15 taps → auto-mission
+  async function _checkAnomaly(snap, moodId) {
+    if (!_db || !_geo) return;
+    const d = snap.data() || {};
+    const total = (d.total || 0) + 1;
+    if (total < 15) return;
+    const moodCount = (d[moodId] || 0) + 1;
+    if (moodCount / total < 0.65) return;
+    const hourKey = 'vv_a_' + _geo + '_' + new Date().toISOString().slice(0, 13);
+    if (localStorage.getItem(hourKey)) return;
+    localStorage.setItem(hourKey, '1');
+    _db.collection('missions').add({
+      title: 'Anomalie ' + MOODS[moodId].label + ' · ' + _geo.toUpperCase(),
+      type: 'auto',
+      trigger: 'mood_anomaly',
+      geohash: _geo,
+      mood: moodId,
+      ratio: Math.round(moodCount / total * 100),
+      status: 'active',
+      createdBy: 'vvmood_auto',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(() => {});
+    document.dispatchEvent(new CustomEvent('vvmood:anomaly', { detail: { geohash: _geo, mood: moodId } }));
   }
 
   function _queueOffline(moodId) {
@@ -236,7 +257,7 @@ const VVMood = (function () {
     el.style.cssText = [
       'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.7)',
       'z-index:99999;text-align:center',
-      'background:rgba(5,5,7,0.98);border:0.5px solid rgba(201,168,76,0.25)',
+      'background:rgba(12,12,16,0.97);border:0.5px solid rgba(255,255,255,0.1)',
       'border-radius:28px;padding:36px 44px',
       'backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px)',
       'transition:transform 0.45s cubic-bezier(0.34,1.56,0.64,1),opacity 0.35s ease',
@@ -244,7 +265,7 @@ const VVMood = (function () {
     ].join(';');
     el.innerHTML = `
       <div style="font-size:52px;margin-bottom:14px;line-height:1;">${b.icon}</div>
-      <div style="font-size:10px;font-weight:600;letter-spacing:2.5px;color:rgba(201,168,76,0.65);text-transform:uppercase;margin-bottom:10px;">Badge Deblocat</div>
+      <div style="font-size:10px;font-weight:600;letter-spacing:2.5px;color:rgba(147,197,253,0.65);text-transform:uppercase;margin-bottom:10px;">Badge Deblocat</div>
       <div style="font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.3px;">${b.name}</div>
       <div style="font-size:13px;color:rgba(255,255,255,0.38);line-height:1.5;">${b.desc}</div>
     `;
@@ -266,7 +287,7 @@ const VVMood = (function () {
   // ═══════════════════════════════════════════════
 
   function toast(msg, icon, color) {
-    icon = icon || '⬡'; color = color || '#C9A84C';
+    icon = icon || '⬡'; color = color || 'rgba(255,255,255,0.9)';
     _toastQueue.push({ msg, icon, color });
     if (!_toastBusy) _nextToast();
   }
@@ -347,7 +368,7 @@ const VVMood = (function () {
 
     const geoLabel = _geo ? _geo.toUpperCase() : '—';
     const streakStr = _profile.streak > 1
-      ? `<span style="color:rgba(201,168,76,0.65);font-size:11px;letter-spacing:0.8px;">${_profile.streak} ZILE · ${_profile.total} CONTRIBUȚII</span>`
+      ? `<span style="color:rgba(255,255,255,0.38);font-size:11px;letter-spacing:0.8px;">${_profile.streak} ZILE · ${_profile.total} CONTRIBUȚII</span>`
       : '';
 
     if (tapped) {
@@ -424,8 +445,8 @@ const VVMood = (function () {
         <div style="font-size:12px;color:${m.color};margin-top:4px;">${m.label} · salvat</div>
       </div>`;
     }
-    return `<div style="padding:14px 16px;background:rgba(201,168,76,0.04);border:0.5px solid rgba(201,168,76,0.14);border-radius:14px;">
-      <div style="font-size:11px;color:rgba(201,168,76,0.6);margin-bottom:10px;letter-spacing:0.5px;">Cum crezi că va fi mâine? +${COINS_PREDICT} VV dacă ghicești</div>
+    return `<div style="padding:14px 16px;background:rgba(255,255,255,0.02);border:0.5px solid rgba(255,255,255,0.07);border-radius:14px;">
+      <div style="font-size:11px;color:rgba(255,255,255,0.28);margin-bottom:10px;letter-spacing:0.5px;">Cum crezi că va fi mâine? +${COINS_PREDICT} VV dacă ghicești</div>
       <div style="display:flex;gap:8px;">
         ${Object.values(MOODS).map(m => `
           <button onclick="VVMood._pred('${m.id}')"
@@ -510,10 +531,10 @@ const VVMood = (function () {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  function getProfile()   { return _profile; }
-  function getBadges()    { return _profile.badges.map(id => ({ id, ...(BADGES[id] || {}) })); }
+  function getProfile()     { return _profile; }
+  function getBadges()      { return _profile.badges.map(id => ({ id, ...(BADGES[id] || {}) })); }
   function hasTappedToday() { return _profile.lastDate === _d(0); }
-  function isReady()      { return _ready; }
+  function isReady()        { return _ready; }
 
   // ═══════════════════════════════════════════════
   // PUBLIC API
