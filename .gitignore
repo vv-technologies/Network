@@ -1,0 +1,80 @@
+# Secrets & API Keys
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+secrets/
+config/secrets.json
+**/GEMINI_API_KEY*
+**/GITHUB_TOKEN*
+**/firebase-key*.json
+**/*_secret*
+**/*_private*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+.Python
+
+# JavaScript / Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+
+# Large model files (AI)
+*.gguf
+*.bin
+*.safetensors
+*.ggml
+models/
+model/
+
+# LEA Private data
+LEA_PRIVAT/
+LEA_OBSERVER/
+**/context.txt
+**/private/
+**/conversation_history*
+
+# Build outputs
+dist/
+build/
+*.log
+*.min.js.map
+*.min.css.map
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Backup files
+*.bak
+*_backup/
+*_bak/
+_ROOTS/
+
+# Temp
+*.tmp
+*.temp
+.cache/
